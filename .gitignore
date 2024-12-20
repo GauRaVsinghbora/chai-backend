@@ -117,4 +117,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+#do not track prettier
+.prettierrc
+.prettierignore
+
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
