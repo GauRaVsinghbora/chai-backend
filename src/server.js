@@ -1,9 +1,18 @@
-import mongoose, { connect } from "mongoose";
-import {DB_NAME} from "./constants.js"
 import connectDB from "./db/index.js";
-import 'dotenv/config'; 
+import "dotenv/config";
 
-connectDB(); 
+connectDB()
+  .then(() => {
+    app.on("error", (error) => {
+        console.log("server connection error",error);
+    });
+    app.listen(process.env.PORT || 8000,()=>{
+        console.log(`server is running at ${process.env.PORT}`);
+    })
+  })
+  .catch((error) => {
+    console.log("mongoDB connection failed !!", error);
+  });
 
 //first approach
 
@@ -21,7 +30,7 @@ connectDB();
 //         app.listen(process.env.PORT,()=>{
 //             console.log(`app is listing at ${process.env.PORT}`);
 //         })
-        
+
 //     }catch(error){
 //         console.log(error);
 //         throw error
