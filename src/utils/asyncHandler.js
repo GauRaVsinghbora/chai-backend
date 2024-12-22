@@ -1,3 +1,5 @@
+//You don't need to wrap every asynchronous handler in a try-catch block.
+
 // A higher-order function to handle asynchronous Express route handlers
 const asyncHandler = (requestHandler) => {
     // Return a new function that wraps the request handler
