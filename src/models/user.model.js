@@ -53,12 +53,12 @@ const userSchema = new mongoose.Schema(
 );
 
 // Middleware to hash the password before saving the user document
-userSchema.pre("save", function (next) {
+userSchema.pre("save",async function (next) {
     if (!this.isModified("password")) {
         // If the password is not modified, skip hashing.
         next();
     }
-    this.password = bcrypt.hash(this.password, 10); // Hash the password with a salt factor of 10.
+    this.password = await bcrypt.hash(this.password, 10); // Hash the password with a salt factor of 10.
     next();
 });
 
