@@ -1,5 +1,7 @@
 import connectDB from "./db/index.js";
 import "dotenv/config";
+import {app} from "./app.js";
+
 
 connectDB()
   .then(() => {
@@ -7,7 +9,7 @@ connectDB()
         console.log("server connection error",error);
     });
     app.listen(process.env.PORT || 8000,()=>{
-        console.log(`server is running at ${process.env.PORT}`);
+        console.log(`📡 server is listing at ${process.env.PORT}`);
     })
   })
   .catch((error) => {
