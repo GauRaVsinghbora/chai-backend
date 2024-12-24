@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from  "../utils/ApiError.js";
-import { users } from "../models/user.model.js";
+import { user } from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
@@ -35,7 +35,7 @@ const registerUser = asyncHandler(async (req, res) => {
     
 
     // step 3
-    const existedUser =  users.findOne({
+    const existedUser =  user.findOne({
         $or: [{userName},{email}]
     })
     if(existedUser){
@@ -59,7 +59,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //step 6
-    const users = await users.create({
+    const user = await user.create({
         fullName,
         avatar: avatar.url,
         coverImage : coverImage?.url || "",
@@ -69,10 +69,10 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     // step 7
-    const createdUser = await users.findById(users._id).select(
+    const createdUser = await user.findById(users._id).select(
         "-password -refreshToken"
     )
-    
+
     // step 8
     if (!createdUser){
         throw new ApiError(500,"Something went wrong while registring user");
