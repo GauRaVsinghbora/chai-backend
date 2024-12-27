@@ -18,6 +18,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //step 1
     const {fullName,email,userName,password}= req.body;
+    console.log(req.body);
     console.log( "email",email);
 
     // step 2   validation
@@ -35,7 +36,7 @@ const registerUser = asyncHandler(async (req, res) => {
     
 
     // step 3
-    const existedUser =  user.findOne({
+    const existedUser = await user.findOne({
         $or: [{userName},{email}]
     })
     if(existedUser){
@@ -43,8 +44,15 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //step 4
+    console.log(req.files);
     const avatarLocalPath  = req.files?.avatar[0]?.path;
-    const coverImagePath = req.files?.coverImage[0]?.path;
+    // const coverImagePath = req.files?.coverImage[0]?.path;
+    
+    let coverImagePath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0){
+        coverImagePath = req.files.coverImage[0].path;
+    }
+
 
     if(avatarLocalPath===""){
         throw new ApiError(400,"avatar filed is required");
@@ -52,14 +60,16 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //step 5
     const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImagePath);
-
+    const coverImage = await uploadOnCloudinary(coverImagePath);  //if there is empty coverImagePath than thanks to couldary it take the empty and automatically return empty array/objec;
+    console.log(coverImage);
+    console.log(avatar);
+    
     if(!avatar){
         throw new ApiError(400,"avatar filed is required");
     }
 
     //step 6
-    const user = await user.create({
+    const User = await user.create({
         fullName,
         avatar: avatar.url,
         coverImage : coverImage?.url || "",
@@ -69,7 +79,7 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     // step 7
-    const createdUser = await user.findById(users._id).select(
+    const createdUser = await user.findById(User._id).select(
         "-password -refreshToken"
     )
 

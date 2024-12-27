@@ -6,7 +6,7 @@ import bcrypt from "bcrypt"; // Bcrypt is used to hash and compare passwords sec
 // Define the schema for the User model
 const userSchema = new mongoose.Schema(
     {
-        username: {
+        userName: {
             type: String,
             required: true, // Username is mandatory.
             lowercase: true, // Converts value to lowercase before saving.
@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
             unique: true, // Ensures no two users have the same email.
             trim: true, // Removes extra whitespace from the value.
         },
-        fullname: {
+        fullName: {
             type: String,
             required: true, // Full name is mandatory.
             lowercase: true, // Converts value to lowercase before saving.
