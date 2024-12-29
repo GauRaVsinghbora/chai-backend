@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { user } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt  from "jsonwebtoken";
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
@@ -195,5 +196,39 @@ const logoutUser = asyncHandler(async(req, res)=>{
     .json( new ApiResponse(200,{},"user logged out successfully."));
 })
 
+const refreshAccessToken = asyncHandler(async(req,res)=>{
+    const incomingRefreshToken =  req.cookies.refreshToken || req.body.refreshToken ;
 
-export { registerUser, loginUser, logoutUser }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
+    if(!incomingRefreshToken){
+        throw new ApiError(401,"unable to get refersh Token");
+    }
+    try {
+        const decodedToken = await jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        console.log(decodedToken);
+        const User = await user.findById(decodedToken?._id);
+        if(!User){
+            throw new ApiError(401, "Invalid user refresh token");
+        }
+        if(incomingRefreshToken !== User?.refreshToken){
+            throw new ApiError(401,"Refresh token is expired or used");
+        }
+    
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+        const {AccessToken,newRefreshToken} = await generateAccessAndRefereshToken(User._id)
+        return res
+        .status(200)
+        .cookie("accessToken", AccessToken ,options)
+        .cookie("refreshToken",newRefreshToken, options)
+        .json(
+            new ApiResponse(200,{AccessToken,newRefreshToken},"access Token refreshed")
+        )
+    } catch (error) {
+        throw new ApiError(401,"unable to verify");
+    }
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
+
