@@ -129,6 +129,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // response login successful.
 
     const { email, password, userName } = req.body;
+    console.log(email,password);
 
     //step 2;
     if (!userName || !password) {
@@ -137,13 +138,14 @@ const loginUser = asyncHandler(async (req, res) => {
     const User = await user.findOne({
         $or: [{ email }, { userName }],
     });
+    console.log(User);
     if (!user) {
         throw new ApiError(400, "username or password is required.");
     }
 
     // all the method which we defind in user.model.js are accessable in User(finding from the username/email) not user
-    const isPasswordvalid = await User.isPasswordCorrect(password);
-    if (!isPasswordvalid) {
+    const isPasswordValid = await User.isPasswordCorrect(password); 
+    if (!isPasswordValid) {
         throw new ApiError(400, "password incorrect.");
     }
 
@@ -188,8 +190,8 @@ const logoutUser = asyncHandler(async(req, res)=>{
     }
     return res
     .status(200)
-    .cookie("accessToken",AccessToken, options)
-    .cookie("refreshToken", RefreshToken, options)
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
     .json( new ApiResponse(200,{},"user logged out successfully."));
 })
 
