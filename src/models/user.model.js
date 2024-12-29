@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Middleware to hash the password before saving the user document
+//The middleware (pre("save")) runs automatically during that operation, but you still need to initiate the save process explicitly.
 userSchema.pre("save",async function (next) {
     if (!this.isModified("password")) {
         // If the password is not modified, skip hashing.

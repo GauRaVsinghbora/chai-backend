@@ -173,6 +173,7 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async(req, res)=>{
+    console.log(req.User._id);
     await user.findByIdAndUpdate(
         req.User._id,
         {
@@ -230,5 +231,43 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
     }
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
+const changeCurrentPassword = asyncHandler(async(req,res)=>{
+    //get accessId from cookie
+    //check the the refresh token.
+    // change the password.
+    const userfind = await user.findById(req.User._id);
 
+    
+    const {oldPassword, newPassword} = req.body;
+    console.log(oldPassword);
+    console.log(newPassword);
+    if (
+        [oldPassword,newPassword].some(
+            (field) => field?.trim() === "",
+        )
+    ) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const isPasswordCorrect = await userfind.isPasswordCorrect(oldPassword);
+
+    if(!isPasswordCorrect){
+        throw new ApiError(400,"password is incorrect.");
+    }
+
+    userfind.password = newPassword;
+    userfind.save({ValidityBeforeSave:false});
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,{},"password changed successfully"));
+
+})
+
+
+
+
+
+
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
