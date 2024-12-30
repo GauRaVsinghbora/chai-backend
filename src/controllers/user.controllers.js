@@ -235,12 +235,11 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
     //get accessId from cookie
     //check the the refresh token.
     // change the password.
-    const userfind = await user.findById(req.User._id);
 
-    
+    const userfind = await user.findById(req.User._id);
+    // console.log(userfind.password);
+
     const {oldPassword, newPassword} = req.body;
-    console.log(oldPassword);
-    console.log(newPassword);
     if (
         [oldPassword,newPassword].some(
             (field) => field?.trim() === "",
@@ -249,6 +248,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "All fields are required");
     }
 
+    //we can check the oldpassword with userfind.password coz userfind.password is in hash form. so if else not work.
     const isPasswordCorrect = await userfind.isPasswordCorrect(oldPassword);
 
     if(!isPasswordCorrect){
@@ -261,7 +261,6 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
     return res
     .status(200)
     .json(new ApiResponse(200,{},"password changed successfully"));
-
 })
 
 
