@@ -4,6 +4,7 @@ import { user } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { deleteCloudinaryFile } from "../utils/deleteCloudinaryFile.js";
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
@@ -321,6 +322,8 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
     // upload on cloundary.
     // response send by cloundary save url on mongodb.
     // send res
+    const oldAvatarLocalPath = req.User?.avatar;
+    
     const newAvatarLocalPath = req.files?.avatar[0]?.path;
     if(!newAvatarLocalPath){
         throw new ApiError(400,"avatar file not found");
@@ -328,6 +331,7 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
     console.log(newAvatarLocalPath);
     // upload on cloudinary
     const avatar = await uploadOnCloudinary(newAvatarLocalPath);
+    // console.log(avatar?.public_id);             
     if(!avatar){
         throw new ApiError("500","error on uploading avator error");
     }
@@ -338,14 +342,46 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
         { $set: {avatar:avatar?.url} },
         {new: true}
     ).select("-password -refreshToken")
+    // deleting the oldAvatar.
+    deleteCloudinaryFile(oldAvatarLocalPath);
+    return res
+    .status(200)
+    .json(new ApiResponse(200,User.toObject(),"avatar updated"));
+})
 
+const updateCoverImagePath = asyncHandler(async(req,res)=>{
+    // check is user is login or not;
+    // accept the file using multer.
+    // upload on cloudinary.
+    // save url on mongodb.
+
+    //accessing the old url 
+    const oldcoverImageLocalPath = req.User?.coverimage;
+
+    const newCoverImage = req.files?.coverImage[0]?.path;
+    if(!newCoverImage){
+        throw new ApiError(400,"file is missing");
+    }
+    const newCoverImagePath = await uploadOnCloudinary(newCoverImage);
+    if(!newCoverImagePath){
+        throw new ApiError(400,"unable to get file from cloudinary");
+    }
+
+    const User = await user.findByIdAndUpdate(
+        req.User?._id,
+        { $set: {coverimage:newCoverImagePath?.url} },
+        {new: true}
+    ).select("-password -refreshToken")
+
+    deleteCloudinaryFile(oldcoverImageLocalPath);
     return res
     .status(200)
     .json(new ApiResponse(200,User.toObject(),"avatar updated"));
 })
 
 
-export {
+
+export{
     registerUser,
     loginUser,
     logoutUser,
@@ -353,5 +389,6 @@ export {
     changeCurrentPassword,
     getCurrentUser,
     updateAccountDetails,
-    updateUserAvatar
+    updateUserAvatar,
+    updateCoverImagePath
 }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
