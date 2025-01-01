@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { deleteCloudinaryFile } from "../utils/deleteCloudinaryFile.js";
+import { subscription } from "../models/subscription.model.js";
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
@@ -301,87 +302,190 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, "all fields are required.");
     }
 
-    const User = await user.findByIdAndUpdate(
-        req.User?._id,
-        {$set: { 
-                fullName,
-                email: email 
-            } 
-        },
-        { new: true },
-    ).select("-password -refreshToken");
+    const User = await user
+        .findByIdAndUpdate(
+            req.User?._id,
+            {
+                $set: {
+                    fullName,
+                    email: email,
+                },
+            },
+            { new: true },
+        )
+        .select("-password -refreshToken");
 
     return res
-    .status(200)
-    .json(new ApiResponse(200,User,"Account details updated succefully"));
+        .status(200)
+        .json(new ApiResponse(200, User, "Account details updated succefully"));
 });
 
-const updateUserAvatar = asyncHandler(async(req,res)=>{
+const updateUserAvatar = asyncHandler(async (req, res) => {
     // check the user is login or not
-    // accept the file 
+    // accept the file
     // upload on cloundary.
     // response send by cloundary save url on mongodb.
     // send res
     const oldAvatarLocalPath = req.User?.avatar;
-    
+
     const newAvatarLocalPath = req.files?.avatar[0]?.path;
-    if(!newAvatarLocalPath){
-        throw new ApiError(400,"avatar file not found");
+    if (!newAvatarLocalPath) {
+        throw new ApiError(400, "avatar file not found");
     }
     console.log(newAvatarLocalPath);
     // upload on cloudinary
     const avatar = await uploadOnCloudinary(newAvatarLocalPath);
-    // console.log(avatar?.public_id);             
-    if(!avatar){
-        throw new ApiError("500","error on uploading avator error");
+    // console.log(avatar?.public_id);
+    if (!avatar) {
+        throw new ApiError("500", "error on uploading avator error");
     }
     // update on mongodb
 
-    const User = await user.findByIdAndUpdate(
-        req.User?._id,
-        { $set: {avatar:avatar?.url} },
-        {new: true}
-    ).select("-password -refreshToken")
+    const User = await user
+        .findByIdAndUpdate(
+            req.User?._id,
+            { $set: { avatar: avatar?.url } },
+            { new: true },
+        )
+        .select("-password -refreshToken");
     // deleting the oldAvatar.
     deleteCloudinaryFile(oldAvatarLocalPath);
     return res
-    .status(200)
-    .json(new ApiResponse(200,User.toObject(),"avatar updated"));
-})
+        .status(200)
+        .json(new ApiResponse(200, User.toObject(), "avatar updated"));
+});
 
-const updateCoverImagePath = asyncHandler(async(req,res)=>{
+const updateCoverImagePath = asyncHandler(async (req, res) => {
     // check is user is login or not;
     // accept the file using multer.
     // upload on cloudinary.
     // save url on mongodb.
 
-    //accessing the old url 
+    //accessing the old url
     const oldcoverImageLocalPath = req.User?.coverimage;
 
     const newCoverImage = req.files?.coverImage[0]?.path;
-    if(!newCoverImage){
-        throw new ApiError(400,"file is missing");
+    if (!newCoverImage) {
+        throw new ApiError(400, "file is missing");
     }
     const newCoverImagePath = await uploadOnCloudinary(newCoverImage);
-    if(!newCoverImagePath){
-        throw new ApiError(400,"unable to get file from cloudinary");
+    if (!newCoverImagePath) {
+        throw new ApiError(400, "unable to get file from cloudinary");
     }
 
-    const User = await user.findByIdAndUpdate(
-        req.User?._id,
-        { $set: {coverimage:newCoverImagePath?.url} },
-        {new: true}
-    ).select("-password -refreshToken")
+    const User = await user
+        .findByIdAndUpdate(
+            req.User?._id,
+            { $set: { coverimage: newCoverImagePath?.url } },
+            { new: true },
+        )
+        .select("-password -refreshToken");
 
     deleteCloudinaryFile(oldcoverImageLocalPath);
     return res
+        .status(200)
+        .json(new ApiResponse(200, User.toObject(), "avatar updated"));
+});
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    
+    const {userName} = await req.query;
+    if (!userName) {
+        throw new ApiError(400, "there is not userName in url");
+    }
+
+    console.log(userName);
+    const channel = await user.aggregate([
+        {
+            $match: {
+                userName: userName?.toLowerCase(),
+            },
+        },
+        {
+            $lookup: {
+                from: "subscriptions", // same as mongodb name adding s.
+                localField: "_id",
+                foreignField: "channel", // all channel have the same _id.
+                as: "subscribers",
+            },
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo",
+            },
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers",
+                },
+                channelSubscriberCount: {
+                    $size: "$subscribedTo",
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.User?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false,
+                    },
+                },
+            },
+        },
+        {
+            $project:{
+                fullName: 1,
+                useName: 1,
+                subscribersCount: 1,
+                channelSubscriberCount: 1,
+                avatar: 1,
+                coverimage: 1,
+                isSubscribed:1,
+                createdAt:1
+            }
+        }
+
+    ]);
+    console.log(channel);
+    if(!channel?.length){
+        throw new ApiError(404,"channel does not exists");
+    };
+
+    return res
     .status(200)
-    .json(new ApiResponse(200,User.toObject(),"avatar updated"));
+    .json(
+        new ApiResponse(200,{channel},"channel is fetched successfully")
+    )
+});
+
+const addSubscription = asyncHandler(async(req,res)=>{
+    const User = await user.findById(req.User?._id);
+    if(!User){
+        throw new ApiError(400, "user is not found");
+    }
+    const createSubscription = await subscription.create(
+        {
+            subscriber: await User.id,
+            channel: await User.id,
+        }
+    )
+
+    const createdSub = await subscription
+        .findById(createSubscription._id);
+
+    if (!createdSub) {
+        throw new ApiError(500,"Something went wrong while subcribing");
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,{createdSub},"subcribed"));
 })
 
 
-
-export{
+export {
     registerUser,
     loginUser,
     logoutUser,
@@ -390,5 +494,7 @@ export{
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateCoverImagePath
+    updateCoverImagePath,
+    getUserChannelProfile,
+    addSubscription
 }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.

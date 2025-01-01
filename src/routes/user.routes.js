@@ -9,6 +9,8 @@ import {
     updateAccountDetails,
     updateUserAvatar,
     updateCoverImagePath,
+    getUserChannelProfile,
+    addSubscription
 } from "../controllers/user.controllers.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -49,5 +51,7 @@ Route.route("/update-coveImage").post(
     verifyJWT,
     updateCoverImagePath,
 );
+Route.route("/getChannelProfile").post(verifyJWT, getUserChannelProfile);
+Route.route("/subcribe").post(verifyJWT,addSubscription);
 
 export default Route;
