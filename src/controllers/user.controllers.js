@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { deleteCloudinaryFile } from "../utils/deleteCloudinaryFile.js";
 import { subscription } from "../models/subscription.model.js";
+import mongoose from "mongoose";
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
@@ -484,6 +485,53 @@ const addSubscription = asyncHandler(async(req,res)=>{
     .json(new ApiResponse(200,{createdSub},"subcribed"));
 })
 
+const getwatchHistory = asyncHandler(async(req,res)=>{
+    const User = await user.aggregate([
+        {
+            $match:{
+                _id: new mongoose.Types.ObjectId(req.User?._id)
+            }
+        },
+        {
+            $lookup:{
+                from: "videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup:{
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        avatar:1,
+                                        userName:1,
+                                        fullName:1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $first: "$owner",
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,User[0].watchHistory,"got the watch history."));
+})
 
 export {
     registerUser,
@@ -496,5 +544,6 @@ export {
     updateUserAvatar,
     updateCoverImagePath,
     getUserChannelProfile,
-    addSubscription
+    addSubscription,
+    getwatchHistory,
 }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.
