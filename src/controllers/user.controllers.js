@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { deleteCloudinaryFile } from "../utils/deleteCloudinaryFile.js";
 import { subscription } from "../models/subscription.model.js";
 import mongoose from "mongoose";
+import { video } from "../models/video.model.js";
 
 const generateAccessAndRefereshToken = async (userId) => {
     try {
@@ -92,7 +93,7 @@ const registerUser = asyncHandler(async (req, res) => {
     console.log(avatar);
 
     if (!avatar) {
-        throw new ApiError(400, "avatar filed is required");
+        throw new ApiError(500, "avatar filed is required");
     }
 
     //step 6
@@ -389,8 +390,7 @@ const updateCoverImagePath = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    
-    const {userName} = await req.query;
+    const { userName } = await req.query;
     if (!userName) {
         throw new ApiError(400, "there is not userName in url");
     }
@@ -436,102 +436,178 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             },
         },
         {
-            $project:{
+            $project: {
                 fullName: 1,
                 useName: 1,
                 subscribersCount: 1,
                 channelSubscriberCount: 1,
                 avatar: 1,
                 coverimage: 1,
-                isSubscribed:1,
-                createdAt:1
-            }
-        }
-
+                isSubscribed: 1,
+                createdAt: 1,
+            },
+        },
     ]);
     console.log(channel);
-    if(!channel?.length){
-        throw new ApiError(404,"channel does not exists");
-    };
+    if (!channel?.length) {
+        throw new ApiError(404, "channel does not exists");
+    }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,{channel},"channel is fetched successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                { channel },
+                "channel is fetched successfully",
+            ),
+        );
 });
 
-const addSubscription = asyncHandler(async(req,res)=>{
+const addSubscription = asyncHandler(async (req, res) => {
     const User = await user.findById(req.User?._id);
-    if(!User){
+    if (!User) {
         throw new ApiError(400, "user is not found");
     }
-    const createSubscription = await subscription.create(
-        {
-            subscriber: await User.id,
-            channel: await User.id,
-        }
-    )
+    const createSubscription = await subscription.create({
+        subscriber: await User.id,
+        channel: await User.id,
+    });
 
-    const createdSub = await subscription
-        .findById(createSubscription._id);
+    const createdSub = await subscription.findById(createSubscription._id);
 
     if (!createdSub) {
-        throw new ApiError(500,"Something went wrong while subcribing");
+        throw new ApiError(500, "Something went wrong while subcribing");
     }
 
     return res
-    .status(200)
-    .json(new ApiResponse(200,{createdSub},"subcribed"));
-})
+        .status(200)
+        .json(new ApiResponse(200, { createdSub }, "subcribed"));
+});
 
-const getwatchHistory = asyncHandler(async(req,res)=>{
+const getwatchHistory = asyncHandler(async (req, res) => {
     const User = await user.aggregate([
         {
-            $match:{
-                _id: new mongoose.Types.ObjectId(req.User?._id)
-            }
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.User?._id),
+            },
         },
         {
-            $lookup:{
+            $lookup: {
                 from: "videos",
-                localField:"watchHistory",
-                foreignField:"_id",
+                localField: "watchHistory",
+                foreignField: "_id",
                 as: "watchHistory",
                 pipeline: [
                     {
-                        $lookup:{
+                        $lookup: {
                             from: "users",
                             localField: "owner",
                             foreignField: "_id",
-                            as:"owner",
-                            pipeline:[
+                            as: "owner",
+                            pipeline: [
                                 {
-                                    $project:{
-                                        avatar:1,
-                                        userName:1,
-                                        fullName:1
-                                    }
-                                }
-                            ]
-                        }
+                                    $project: {
+                                        avatar: 1,
+                                        userName: 1,
+                                        fullName: 1,
+                                    },
+                                },
+                            ],
+                        },
                     },
                     {
-                        $addFields:{
-                            owner:{
+                        $addFields: {
+                            owner: {
                                 $first: "$owner",
-                            }
-                        }
-                    }
-                ]
-            }
-        }
-    ])
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    ]);
 
     return res
-    .status(200)
-    .json(new ApiResponse(200,User[0].watchHistory,"got the watch history."));
-})
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                User[0].watchHistory,
+                "got the watch history.",
+            ),
+        );
+});
+
+const uploadVideo = asyncHandler(async (req, res) => {
+    // check is user is login or not.
+    // take the input from the frontend.
+    // take the files(video and thumnail) from the multer.
+    // upload the files into the cloudinary.
+    // create the schema.
+    // take the file url insert in the video schema.
+    // get the schema.
+    // send the res.
+
+    //step 1.
+    const User = await req.User?._id;
+    if (!User) {
+        throw new ApiError(401, "user is not login.");
+    }
+    //step 2.
+    const { title, description } = req.body;
+    if ([title, description].some((field) => field?.trim() === "")) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    //step 3.
+    const videoLocalPath = req.files?.video[0]?.path;
+
+    let thumbnailLocalPath;
+    if (
+        req.files &&
+        Array.isArray(req.files.thumbnail) &&
+        req.files.thumbnail.length > 0
+    ) {
+        thumbnailLocalPath = req.files.thumbnail[0].path;
+    }
+
+    if (videoLocalPath === "") {
+        throw new ApiError(400, "fileds(video and thumbnail) are required");
+    }
+
+    // step 4.
+    const videoCloud = await uploadOnCloudinary(videoLocalPath,);
+    const thumbnailCloud = await uploadOnCloudinary(thumbnailLocalPath);
+
+    if (!videoCloud) {
+        throw new ApiError(500, "sorry cloudinary unable to sent the response");
+    }
+
+    // step 5.
+    const video1 = await video.create({
+        video: videoCloud?.url,
+        thumbnail: thumbnailCloud?.url,
+        owner: User,
+        title,
+        description,
+        duration: videoCloud?.duration,
+    });
+    if (!video1) {
+        throw new ApiError(500, "unable to make the schema");
+    }
+
+    //step 6.
+    const videoSchema = await video.findById(video1._id);
+    if (!videoSchema) {
+        throw new ApiError(500, "unable to get the videoSchema from mongodb");
+    }
+
+    //step 7.
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videoSchema, "video is uploaded"));
+});
 
 export {
     registerUser,
@@ -546,4 +622,5 @@ export {
     getUserChannelProfile,
     addSubscription,
     getwatchHistory,
+    uploadVideo,
 }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.

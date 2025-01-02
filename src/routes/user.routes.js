@@ -12,6 +12,7 @@ import {
     getUserChannelProfile,
     addSubscription,
     getwatchHistory,
+    uploadVideo,
 } from "../controllers/user.controllers.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -54,7 +55,21 @@ Route.route("/update-coveImage").patch(
 );
 // Route.route("/getChannelProfile").post(verifyJWT, getUserChannelProfile);
 Route.route("/c/:userName").get(verifyJWT, getUserChannelProfile);
-Route.route("/subcribe").post(verifyJWT,addSubscription);
-Route.route("/history").get(verifyJWT,getwatchHistory);
+Route.route("/subcribe").post(verifyJWT, addSubscription);
+Route.route("/history").get(verifyJWT, getwatchHistory);
+Route.route("/upload-video").post(
+    verifyJWT,
+    upload.fields([
+        {
+            name: "video",
+            maxCount: 1,
+        },
+        {
+            name: "thumbnail",
+            maxCount: 1,
+        },
+    ]),
+    uploadVideo,
+);
 
 export default Route;
