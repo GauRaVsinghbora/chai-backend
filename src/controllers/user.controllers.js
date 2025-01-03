@@ -577,7 +577,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     }
 
     // step 4.
-    const videoCloud = await uploadOnCloudinary(videoLocalPath,);
+    const videoCloud = await uploadOnCloudinary(videoLocalPath);
     const thumbnailCloud = await uploadOnCloudinary(thumbnailLocalPath);
 
     if (!videoCloud) {
@@ -609,6 +609,47 @@ const uploadVideo = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, videoSchema, "video is uploaded"));
 });
 
+const addingVideoHistory = asyncHandler(async (req, res) => {
+    // check the user/ get the user.
+    // get the video url from params.
+    // compare the video url with the video schema.
+    // find the video url.
+    // add the video url in user watchHistory.
+    // update the user.
+
+    // step 1.
+    const User = await req.User?._id;
+    if (!User) {
+        throw new ApiError(400, "user is not found");
+    }
+    // step 2.
+    const { videoUrl } = await req.query;
+    if (!videoUrl) {
+        throw new ApiError(400, "can't find the videoURL");
+    }
+
+    // step 3 and step 4.
+    const videoId = await video.findOne({ video: videoUrl }, { _id: 1 });
+    if (!videoId) {
+        throw new ApiError(400, "can't find the videoId");
+    }
+
+    // step 5.
+    const watchHistoryUpdate = await user.findByIdAndUpdate(
+        User,
+        {
+            $addToSet: {
+                watchHistory: videoId,
+            },
+        },
+        { new: true },
+    );
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,watchHistoryUpdate,"watchHistory is added."));
+});
+
 export {
     registerUser,
     loginUser,
@@ -623,4 +664,5 @@ export {
     addSubscription,
     getwatchHistory,
     uploadVideo,
+    addingVideoHistory
 }; // this is not default export so on importing this file. use this curly bracket { registerUser } from '../controllers/user.controllers.js'; if it is a default then do not use any curly bracket.

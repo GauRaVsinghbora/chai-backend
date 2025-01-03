@@ -13,6 +13,7 @@ import {
     addSubscription,
     getwatchHistory,
     uploadVideo,
+    addingVideoHistory
 } from "../controllers/user.controllers.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -71,5 +72,6 @@ Route.route("/upload-video").post(
     ]),
     uploadVideo,
 );
+Route.route("/add-watchHistory").patch(verifyJWT,addingVideoHistory)
 
 export default Route;
